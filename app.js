@@ -107,7 +107,7 @@ const AUTHENTIC_SYMBOL_DATA = {
     }
 };
 
-// ルティスかどうかを判定（かえでサーバーの最初のキャラ）
+//（かえでサーバーの最初のキャラ）
 function isRutis(serverIndex, charIndex) {
     return serverIndex === 0 && charIndex === 0;
 }
@@ -332,6 +332,10 @@ function renderTable(tableId, items, dataKey, isRutisOnly = false) {
         }));
     }
 
+    // 固定表示列数（最大7キャラに合わせる）
+    const MAX_DISPLAY_COLS = 7;
+    const emptyColsCount = Math.max(0, MAX_DISPLAY_COLS - charInfoList.length);
+
     let html = '<table><thead><tr><th class="item-col">項目</th>';
     // 週間ボスの場合はヘッダーに全チェックボタンを配置
     if (dataKey === 'weeklyBosses') {
@@ -346,6 +350,12 @@ function renderTable(tableId, items, dataKey, isRutisOnly = false) {
             html += `<th class="char-col">${info.displayName}</th>`;
         });
     }
+
+    // 空のヘッダー列を追加
+    for (let i = 0; i < emptyColsCount; i++) {
+        html += '<th class="char-col"></th>';
+    }
+
     html += '</tr></thead><tbody>';
 
     items.forEach(item => {
@@ -451,6 +461,12 @@ function renderTable(tableId, items, dataKey, isRutisOnly = false) {
                 </td>`;
             }
         });
+
+        // 空のセルを追加
+        for (let i = 0; i < emptyColsCount; i++) {
+            html += '<td class="check-cell"></td>';
+        }
+
         html += '</tr>';
     });
 
@@ -505,11 +521,11 @@ function renderTable(tableId, items, dataKey, isRutisOnly = false) {
             const srvIndex = parseInt(btn.dataset.server);
             const charIndex = parseInt(btn.dataset.char);
             const key = btn.dataset.key;
-            const itemList = DATA[key === 'weeklyBosses' ? 'weeklyBosses' : key];
+            // items引数には対敵者なども含まれているのでそのまま使用する
             const charData = serverData.servers[srvIndex].characters[charIndex];
 
-            const allChecked = itemList.every(item => charData[key][item]);
-            itemList.forEach(item => {
+            const allChecked = items.every(item => charData[key][item]);
+            items.forEach(item => {
                 charData[key][item] = !allChecked;
             });
             saveData();
@@ -694,6 +710,7 @@ function renderSchedule() {
                         ${schedule.memo ? `<span class="schedule-memo">${schedule.memo}</span>` : ''}
                     </div>
                     <div class="schedule-actions">
+                        <button class="schedule-copy-btn" data-id="${schedule.id}" title="日程をコピー">日程コピー</button>
                         <button class="schedule-repeat-btn" data-id="${schedule.id}" title="来週も同じ時間でスケジュール">🔁</button>
                         <button class="schedule-delete-btn" data-id="${schedule.id}">✕</button>
                     </div>
@@ -712,6 +729,9 @@ function renderSchedule() {
     });
     container.querySelectorAll('.schedule-repeat-btn').forEach(btn => {
         btn.addEventListener('click', () => repeatNextWeek(btn.dataset.id));
+    });
+    container.querySelectorAll('.schedule-copy-btn').forEach(btn => {
+        btn.addEventListener('click', () => copyScheduleDate(btn.dataset.id));
     });
 }
 
@@ -786,6 +806,27 @@ function repeatNextWeek(id) {
 
     saveScheduleData(schedules);
     renderContent();
+}
+
+// 日程をコピー
+function copyScheduleDate(id) {
+    const schedules = loadScheduleData();
+    const schedule = schedules.find(s => s.id === id);
+    if (!schedule) return;
+
+    const date = new Date(schedule.datetime);
+    const dayNames = ['日', '月', '火', '水', '木', '金', '土'];
+    const month = date.getMonth() + 1;
+    const day = date.getDate();
+    const dayName = dayNames[date.getDay()];
+    const hours = String(date.getHours()).padStart(2, '0');
+    const minutes = String(date.getMinutes()).padStart(2, '0');
+
+    const copyText = `${month}月${day}日(${dayName})${hours}:${minutes}`;
+
+    navigator.clipboard.writeText(copyText).catch(err => {
+        console.error('コピーに失敗しました:', err);
+    });
 }
 
 // ========== 設定モーダル機能 ==========
