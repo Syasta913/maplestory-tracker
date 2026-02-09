@@ -1,5 +1,47 @@
 // メイプルストーリー ボス・クエスト管理アプリ
 
+// ========== 免責事項チェック ==========
+function checkDisclaimer() {
+    const agreed = localStorage.getItem('disclaimerAgreed');
+    if (!agreed) {
+        showDisclaimerModal();
+        return false;
+    }
+    return true;
+}
+
+function showDisclaimerModal() {
+    const overlay = document.createElement('div');
+    overlay.id = 'disclaimer-overlay';
+    overlay.innerHTML = `
+        <div class="disclaimer-modal">
+            <h2>⚠️ 免責事項</h2>
+            <p>このアプリケーションの利用は<strong>自己責任</strong>でお願いします。</p>
+            <p>データの損失やその他の問題について、開発者は一切の責任を負いません。</p>
+            <div class="disclaimer-buttons">
+                <button id="disclaimer-agree-btn" class="disclaimer-btn agree">同意する</button>
+                <button id="disclaimer-decline-btn" class="disclaimer-btn decline">同意しない</button>
+            </div>
+        </div>
+    `;
+    document.body.appendChild(overlay);
+
+    document.getElementById('disclaimer-agree-btn').addEventListener('click', () => {
+        localStorage.setItem('disclaimerAgreed', 'true');
+        overlay.remove();
+        // コンテナを再表示してページをリロード
+        const container = document.querySelector('.container');
+        if (container) container.style.display = '';
+        location.reload();
+    });
+
+    document.getElementById('disclaimer-decline-btn').addEventListener('click', () => {
+        window.close();
+        // window.close() が動作しない場合のフォールバック
+        document.body.innerHTML = '<div style="display:flex;justify-content:center;align-items:center;height:100vh;color:white;font-size:1.5rem;">ページを閉じてください</div>';
+    });
+}
+
 // デフォルトサーバー名
 const DEFAULT_SERVER_NAMES = ['かえで', 'くるみ', 'けやき', 'くぬぎ', 'チャレンジ'];
 
