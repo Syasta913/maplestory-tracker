@@ -19,29 +19,14 @@ function loadSettings() {
     if (saved) {
         return JSON.parse(saved);
     }
-    // 現在のハードコードされた設定から移行
+    // 初期設定（一般的な名前）
     return {
         servers: [
             {
-                name: 'かえで',
+                name: 'サーバー1',
                 characters: [
-                    { name: 'ルティス', bosses: [...ALL_BOSSES] },
-                    { name: 'バルティ', bosses: ALL_BOSSES.filter(b => !['カリーン', 'リンボ', 'バルド', '対敵者'].includes(b)) },
-                    { name: 'Syalice', bosses: ALL_BOSSES.filter(b => !['カリーン', 'リンボ', 'バルド', '対敵者'].includes(b)) },
-                    { name: 'Syasta', bosses: ALL_BOSSES.filter(b => !['カリーン', 'リンボ', 'バルド', '対敵者'].includes(b)) },
-                    { name: '夜天瑠璃', bosses: ALL_BOSSES.filter(b => !['カリーン', 'リンボ', 'バルド', '対敵者'].includes(b)) }
-                ]
-            },
-            {
-                name: 'くるみ',
-                characters: [
-                    { name: 'ミルティア', bosses: ALL_BOSSES.filter(b => !['カリーン', 'リンボ', 'バルド', '対敵者'].includes(b)) }
-                ]
-            },
-            {
-                name: 'チャレンジ',
-                characters: [
-                    { name: 'レティルナ', bosses: ALL_BOSSES.filter(b => !['カリーン', 'リンボ', 'バルド', '対敵者'].includes(b)) }
+                    { name: 'キャラ①', bosses: [...ALL_BOSSES] },
+                    { name: 'キャラ②', bosses: ALL_BOSSES.filter(b => !['カリーン', 'リンボ', 'バルド', '対敵者'].includes(b)) }
                 ]
             }
         ]
@@ -454,7 +439,7 @@ function renderTable(tableId, items, dataKey, isRutisOnly = false) {
                         const hours = String(schedDate.getHours()).padStart(2, '0');
                         const minutes = String(schedDate.getMinutes()).padStart(2, '0');
                         const tooltipText = `${month}月${day}日(${dayName})${hours}:${minutes}`;
-                        scheduleIcon = `<span class="schedule-icon" title="${tooltipText}">📅</span>`;
+                        scheduleIcon = `<span class="schedule-icon" data-tooltip="${tooltipText}">📅</span>`;
                     }
                 }
 
@@ -880,6 +865,10 @@ function renderSettingsContent() {
 
 // サーバー設定を描画
 function renderServerSettings(container) {
+    // 未使用のサーバー名を取得
+    const usedNames = tempSettings.servers.map(s => s.name);
+    const availableServers = DEFAULT_SERVER_NAMES.filter(name => !usedNames.includes(name));
+
     let html = '<div class="settings-list">';
 
     tempSettings.servers.forEach((server, i) => {
@@ -891,7 +880,16 @@ function renderServerSettings(container) {
         `;
     });
 
-    if (tempSettings.servers.length < 5) {
+    if (tempSettings.servers.length < 5 && availableServers.length > 0) {
+        html += `
+            <div class="settings-item add-server-row">
+                <select id="new-server-select" class="settings-select" style="margin-bottom: 0; flex: 1;">
+                    ${availableServers.map(name => `<option value="${name}">${name}</option>`).join('')}
+                </select>
+                <button class="settings-add-btn" style="flex: none; width: auto; padding: 0.5rem 1rem;" onclick="addServerFromSelect()">追加</button>
+            </div>
+        `;
+    } else if (tempSettings.servers.length < 5) {
         html += `<button class="settings-add-btn" onclick="addServer()">+ サーバー追加</button>`;
     }
 
@@ -907,13 +905,25 @@ function renderServerSettings(container) {
     });
 }
 
-// サーバー追加
+// サーバー追加（デフォルト名）
 function addServer() {
     if (tempSettings.servers.length >= 5) return;
     const nextIdx = tempSettings.servers.length;
     const defaultName = DEFAULT_SERVER_NAMES[nextIdx] || `サーバー${nextIdx + 1}`;
     tempSettings.servers.push({
         name: defaultName,
+        characters: []
+    });
+    renderSettingsContent();
+}
+
+// サーバー追加（ドロップダウンから選択）
+function addServerFromSelect() {
+    if (tempSettings.servers.length >= 5) return;
+    const select = document.getElementById('new-server-select');
+    const serverName = select.value;
+    tempSettings.servers.push({
+        name: serverName,
         characters: []
     });
     renderSettingsContent();
@@ -979,8 +989,23 @@ function renderCharacterList(serverIdx) {
 function addCharacter(serverIdx) {
     const server = tempSettings.servers[serverIdx];
     if (server.characters.length >= 7) return;
-    const nextIdx = server.characters.length;
-    const defaultName = DEFAULT_CHAR_NAMES[nextIdx] || `キャラ${nextIdx + 1}`;
+
+    // 使用済みの名前を取得
+    const usedNames = server.characters.map(c => c.name);
+
+    // 未使用の名前を探す
+    let defaultName = '';
+    for (const name of DEFAULT_CHAR_NAMES) {
+        if (!usedNames.includes(name)) {
+            defaultName = name;
+            break;
+        }
+    }
+    // すべて使用済みの場合はフォールバック
+    if (!defaultName) {
+        defaultName = `キャラ${server.characters.length + 1}`;
+    }
+
     server.characters.push({
         name: defaultName,
         bosses: [...ALL_BOSSES]
@@ -1069,6 +1094,9 @@ function initSettingsModal() {
     document.getElementById('open-settings').addEventListener('click', openSettings);
     document.getElementById('close-settings').addEventListener('click', closeSettings);
     document.getElementById('save-settings').addEventListener('click', saveAndCloseSettings);
+    document.getElementById('export-settings').addEventListener('click', exportData);
+    document.getElementById('import-settings').addEventListener('click', () => document.getElementById('import-file').click());
+    document.getElementById('import-file').addEventListener('change', importData);
 
     // タブ切り替え
     document.querySelectorAll('.modal-tab').forEach(tab => {
@@ -1079,6 +1107,73 @@ function initSettingsModal() {
     document.getElementById('settings-modal').addEventListener('click', (e) => {
         if (e.target.id === 'settings-modal') closeSettings();
     });
+}
+
+// データをエクスポート
+function exportData() {
+    const data = {
+        version: 1,
+        exportDate: new Date().toISOString(),
+        settings: loadSettings(),
+        trackerData: JSON.parse(localStorage.getItem('mapleTracker') || '{}'),
+        scheduleData: loadScheduleData()
+    };
+
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `maple-tracker-backup-${new Date().toISOString().slice(0, 10)}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+}
+
+// データをインポート
+function importData(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+        try {
+            const data = JSON.parse(event.target.result);
+
+            if (!data.settings) {
+                alert('無効なファイル形式です');
+                return;
+            }
+
+            if (!confirm('現在のデータを上書きしますか？\n（設定、チェック状態、スケジュールがすべて置き換わります）')) {
+                return;
+            }
+
+            // 設定をインポート
+            saveSettings(data.settings);
+            SERVERS = getServers();
+
+            // トラッカーデータをインポート
+            if (data.trackerData) {
+                localStorage.setItem('mapleTracker', JSON.stringify(data.trackerData));
+                serverData = loadData();
+            }
+
+            // スケジュールデータをインポート
+            if (data.scheduleData) {
+                saveScheduleData(data.scheduleData);
+            }
+
+            closeSettings();
+            updateServerTabs();
+            renderContent();
+            alert('インポートが完了しました！');
+        } catch (err) {
+            alert('ファイルの読み込みに失敗しました: ' + err.message);
+        }
+    };
+    reader.readAsText(file);
+    e.target.value = '';
 }
 
 // キャラクターがボスを表示するかチェック
