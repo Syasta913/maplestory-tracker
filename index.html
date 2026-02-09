@@ -12,7 +12,7 @@
 <body>
     <div class="container">
         <header>
-            <h1>🍁 メイプルストーリー 管理</h1>
+            <h1>🍄 メイプルストーリー 管理</h1>
             <p class="subtitle">週間・月間ボス & ウィークリークエスト トラッカー</p>
         </header>
 
@@ -44,6 +44,13 @@
                     <!-- 設定内容はJSで動的生成 -->
                 </div>
                 <div class="modal-footer">
+                    <div class="modal-footer-left">
+                        <button class="modal-action-btn" id="export-settings">📤 エクスポート</button>
+                        <button class="modal-action-btn" id="import-settings">📥 インポート</button>
+                        <span class="help-icon"
+                            data-tooltip="データはブラウザに保存されます。キャッシュ削除で消える可能性があるため、定期的にエクスポートでバックアップを取ることをおすすめします。">❓</span>
+                        <input type="file" id="import-file" accept=".json" style="display: none;">
+                    </div>
                     <button class="modal-save-btn" id="save-settings">保存して閉じる</button>
                 </div>
             </div>
