@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>メイプルストーリー ボス・クエスト管理</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
+</head>
+
+<body>
+    <div class="container">
+        <header>
+            <h1>🍁 メイプルストーリー 管理</h1>
+            <p class="subtitle">週間・月間ボス & ウィークリークエスト トラッカー</p>
+        </header>
+
+        <div class="reset-info">
+            <div class="reset-item">
+                <span class="label">週間リセットまで</span>
+                <span id="weekly-countdown" class="countdown">--</span>
+            </div>
+            <div class="reset-item">
+                <span class="label">月間リセットまで</span>
+                <span id="monthly-countdown" class="countdown">--</span>
+            </div>
+            <button class="settings-btn" id="open-settings" title="設定">⚙️</button>
+        </div>
+
+        <!-- 設定モーダル -->
+        <div class="modal-overlay" id="settings-modal">
+            <div class="modal">
+                <div class="modal-header">
+                    <h2>⚙️ 設定</h2>
+                    <button class="modal-close" id="close-settings">✕</button>
+                </div>
+                <div class="modal-tabs">
+                    <button class="modal-tab active" data-tab="servers">サーバー</button>
+                    <button class="modal-tab" data-tab="characters">キャラクター</button>
+                    <button class="modal-tab" data-tab="bosses">ボス設定</button>
+                </div>
+                <div class="modal-body" id="settings-content">
+                    <!-- 設定内容はJSで動的生成 -->
+                </div>
+                <div class="modal-footer">
+                    <button class="modal-save-btn" id="save-settings">保存して閉じる</button>
+                </div>
+            </div>
+        </div>
+
+        <nav class="server-tabs">
+            <button class="server-tab" data-server="all">全サーバー</button>
+            <button class="server-tab active" data-server="0">かえで</button>
+            <button class="server-tab" data-server="1">くるみ</button>
+            <button class="server-tab" data-server="2">チャレンジ</button>
+        </nav>
+
+        <main class="content" id="main-content">
+            <!-- コンテンツはJSで動的生成 -->
+        </main>
+
+        <footer>
+            <button class="reset-btn" id="reset-server">現在のサーバーをリセット</button>
+            <button class="reset-btn danger" id="reset-all">全データをリセット</button>
+        </footer>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+
+</html>
