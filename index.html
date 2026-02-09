@@ -12,8 +12,7 @@
 <body>
     <div class="container">
         <header>
-            <h1>🍄 Maplestory Tracker 🍁</h1
-            <p class="subtitle">週間・月間ボス & ウィークリークエスト トラッカー</p>
+            <h1>🍄 Maplestory Tracker 🍁</h1 <p class="subtitle">週間・月間ボス & ウィークリークエスト トラッカー</p>
         </header>
 
         <div class="reset-info">
@@ -74,6 +73,15 @@
     </div>
 
     <script src="app.js"></script>
+    <script>
+        // ページ読み込み時に免責事項チェック
+        document.addEventListener('DOMContentLoaded', function () {
+            if (!checkDisclaimer()) {
+                // 免責事項未同意の場合、メインコンテンツを非表示
+                document.querySelector('.container').style.display = 'none';
+            }
+        });
+    </script>
 </body>
 
 </html>
