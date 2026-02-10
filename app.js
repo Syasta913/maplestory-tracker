@@ -700,16 +700,6 @@ function renderSchedule() {
     const allBosses = getAllBosses();
     const allCharacters = getAllCharacters();
 
-    // 5分刻みの時間オプションを生成
-    const timeOptions = [];
-    for (let h = 0; h < 24; h++) {
-        for (let m = 0; m < 60; m += 5) {
-            const hh = h.toString().padStart(2, '0');
-            const mm = m.toString().padStart(2, '0');
-            timeOptions.push(`${hh}:${mm}`);
-        }
-    }
-
     let html = `
         <div class="schedule-add">
             <select id="schedule-boss" class="schedule-input">
@@ -721,10 +711,13 @@ function renderSchedule() {
                 ${allCharacters.map(c => `<option value="${c.charName}">${c.charName} (${c.serverName})</option>`).join('')}
             </select>
             <input type="date" id="schedule-date" class="schedule-input">
-            <select id="schedule-time" class="schedule-input">
-                <option value="">時間...</option>
-                ${timeOptions.map(t => `<option value="${t}">${t}</option>`).join('')}
-            </select>
+            <div class="time-picker-wrapper" id="time-picker-wrapper">
+                <div class="time-picker-display schedule-input" id="time-picker-display">時間...</div>
+                <input type="hidden" id="schedule-time" value="">
+                <div class="time-picker-dropdown" id="time-picker-dropdown">
+                    <div class="time-picker-scroll" id="time-picker-scroll"></div>
+                </div>
+            </div>
             <input type="text" id="schedule-memo" class="schedule-input" placeholder="メモ（参加者など）">
             <button id="schedule-add-btn" class="schedule-btn">追加</button>
         </div>
@@ -749,6 +742,7 @@ function renderSchedule() {
                         <span class="schedule-boss-name">${schedule.boss}</span>
                         ${schedule.char ? `<span class="schedule-char-name">${schedule.char}</span>` : ''}
                         <span class="schedule-date">${dateStr} ${timeStr}</span>
+                        <button class="schedule-edit-btn" data-id="${schedule.id}" title="日時を変更">✏️</button>
                         ${schedule.memo ? `<span class="schedule-memo">${schedule.memo}</span>` : ''}
                     </div>
                     <div class="schedule-actions">
@@ -774,6 +768,114 @@ function renderSchedule() {
     });
     container.querySelectorAll('.schedule-copy-btn').forEach(btn => {
         btn.addEventListener('click', () => copyScheduleDate(btn.dataset.id));
+    });
+    container.querySelectorAll('.schedule-edit-btn').forEach(btn => {
+        btn.addEventListener('click', () => startEditSchedule(btn.dataset.id));
+    });
+
+    // カスタム時間ピッカーを初期化
+    initTimePicker();
+}
+
+// カスタム時間ピッカーの初期化
+function initTimePicker() {
+    const wrapper = document.getElementById('time-picker-wrapper');
+    const display = document.getElementById('time-picker-display');
+    const dropdown = document.getElementById('time-picker-dropdown');
+    const scrollContainer = document.getElementById('time-picker-scroll');
+    const hiddenInput = document.getElementById('schedule-time');
+
+    if (!wrapper || !display || !dropdown || !scrollContainer) return;
+
+    // 5分刻みの時間オプションを生成
+    const timeOptions = [];
+    for (let h = 0; h < 24; h++) {
+        for (let m = 0; m < 60; m += 5) {
+            const hh = h.toString().padStart(2, '0');
+            const mm = m.toString().padStart(2, '0');
+            timeOptions.push(`${hh}:${mm}`);
+        }
+    }
+
+    // 循環スクロール用に3セット分のアイテムを生成
+    const totalItems = timeOptions.length; // 288
+    const itemHeight = 36;
+
+    function buildItems() {
+        scrollContainer.innerHTML = '';
+        // 3セット生成（前・中央・後）
+        for (let set = 0; set < 3; set++) {
+            timeOptions.forEach((time, idx) => {
+                const item = document.createElement('div');
+                item.className = 'time-picker-item';
+                item.textContent = time;
+                item.dataset.value = time;
+                item.dataset.index = idx;
+                item.addEventListener('click', () => {
+                    hiddenInput.value = time;
+                    display.textContent = time;
+                    display.classList.add('selected');
+                    dropdown.classList.remove('open');
+                    // 選択状態を更新
+                    scrollContainer.querySelectorAll('.time-picker-item').forEach(el => {
+                        el.classList.toggle('active', el.dataset.value === time);
+                    });
+                });
+                scrollContainer.appendChild(item);
+            });
+        }
+    }
+
+    buildItems();
+
+    // 中央セットの先頭にスクロール位置を設定
+    function resetToCenter() {
+        scrollContainer.scrollTop = totalItems * itemHeight;
+    }
+
+    // スクロール位置を監視して循環させる
+    scrollContainer.addEventListener('scroll', () => {
+        const scrollTop = scrollContainer.scrollTop;
+        const oneSetHeight = totalItems * itemHeight;
+
+        // 上端を超えたら中央セットにジャンプ
+        if (scrollTop < oneSetHeight * 0.25) {
+            scrollContainer.scrollTop = scrollTop + oneSetHeight;
+        }
+        // 下端を超えたら中央セットにジャンプ
+        else if (scrollTop > oneSetHeight * 1.75) {
+            scrollContainer.scrollTop = scrollTop - oneSetHeight;
+        }
+    });
+
+    // ドロップダウンの開閉
+    display.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const isOpen = dropdown.classList.contains('open');
+        if (isOpen) {
+            dropdown.classList.remove('open');
+        } else {
+            dropdown.classList.add('open');
+            // 選択済みの時間があればその位置にスクロール
+            const selectedValue = hiddenInput.value;
+            if (selectedValue) {
+                const idx = timeOptions.indexOf(selectedValue);
+                if (idx >= 0) {
+                    // 中央セットの選択位置にスクロール（中央に表示）
+                    const targetScroll = (totalItems + idx) * itemHeight - dropdown.clientHeight / 2 + itemHeight / 2;
+                    scrollContainer.scrollTop = targetScroll;
+                }
+            } else {
+                resetToCenter();
+            }
+        }
+    });
+
+    // 外部クリックで閉じる
+    document.addEventListener('click', (e) => {
+        if (!wrapper.contains(e.target)) {
+            dropdown.classList.remove('open');
+        }
     });
 }
 
@@ -809,6 +911,11 @@ function addSchedule() {
     document.getElementById('schedule-char').value = '';
     document.getElementById('schedule-date').value = '';
     document.getElementById('schedule-time').value = '';
+    const timeDisplay = document.getElementById('time-picker-display');
+    if (timeDisplay) {
+        timeDisplay.textContent = '時間...';
+        timeDisplay.classList.remove('selected');
+    }
     document.getElementById('schedule-memo').value = '';
 }
 
@@ -869,6 +976,83 @@ function copyScheduleDate(id) {
     navigator.clipboard.writeText(copyText).catch(err => {
         console.error('コピーに失敗しました:', err);
     });
+}
+
+// スケジュールの日時を編集開始
+function startEditSchedule(id) {
+    const schedules = loadScheduleData();
+    const schedule = schedules.find(s => s.id === id);
+    if (!schedule) return;
+
+    const itemEl = document.querySelector(`.schedule-item[data-id="${id}"]`);
+    if (!itemEl) return;
+
+    const infoEl = itemEl.querySelector('.schedule-info');
+    const dateSpan = infoEl.querySelector('.schedule-date');
+    const editBtn = infoEl.querySelector('.schedule-edit-btn');
+
+    // 既に編集中の場合は何もしない
+    if (infoEl.querySelector('.schedule-edit-form')) return;
+
+    const currentDate = new Date(schedule.datetime);
+    const dateValue = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}-${String(currentDate.getDate()).padStart(2, '0')}`;
+    const timeValue = `${String(currentDate.getHours()).padStart(2, '0')}:${String(currentDate.getMinutes()).padStart(2, '0')}`;
+
+    // 5分刻みの時間オプションを生成
+    const timeOptions = [];
+    for (let h = 0; h < 24; h++) {
+        for (let m = 0; m < 60; m += 5) {
+            const hh = h.toString().padStart(2, '0');
+            const mm = m.toString().padStart(2, '0');
+            timeOptions.push(`${hh}:${mm}`);
+        }
+    }
+
+    // インライン編集フォームを作成
+    const editForm = document.createElement('div');
+    editForm.className = 'schedule-edit-form';
+    editForm.innerHTML = `
+        <input type="date" class="schedule-edit-date schedule-input" value="${dateValue}">
+        <select class="schedule-edit-time schedule-input">
+            ${timeOptions.map(t => `<option value="${t}" ${t === timeValue ? 'selected' : ''}>${t}</option>`).join('')}
+        </select>
+        <button class="schedule-edit-save-btn" title="保存">✓</button>
+        <button class="schedule-edit-cancel-btn" title="キャンセル">✕</button>
+    `;
+
+    // 日付表示と編集ボタンを非表示にして編集フォームを挿入
+    dateSpan.style.display = 'none';
+    editBtn.style.display = 'none';
+    dateSpan.after(editForm);
+
+    // 保存ボタン
+    editForm.querySelector('.schedule-edit-save-btn').addEventListener('click', () => {
+        const newDate = editForm.querySelector('.schedule-edit-date').value;
+        const newTime = editForm.querySelector('.schedule-edit-time').value;
+        if (!newDate || !newTime) {
+            alert('日付と時間を入力してください');
+            return;
+        }
+        saveEditSchedule(id, `${newDate}T${newTime}`);
+    });
+
+    // キャンセルボタン
+    editForm.querySelector('.schedule-edit-cancel-btn').addEventListener('click', () => {
+        editForm.remove();
+        dateSpan.style.display = '';
+        editBtn.style.display = '';
+    });
+}
+
+// スケジュールの日時を保存
+function saveEditSchedule(id, newDatetime) {
+    const schedules = loadScheduleData();
+    const schedule = schedules.find(s => s.id === id);
+    if (!schedule) return;
+
+    schedule.datetime = newDatetime;
+    saveScheduleData(schedules);
+    renderContent();
 }
 
 // ========== 設定モーダル機能 ==========

@@ -839,6 +839,96 @@ footer {
     padding: 1rem;
 }
 
+/* カスタム時間ピッカー */
+.time-picker-wrapper {
+    position: relative;
+}
+
+.time-picker-display {
+    cursor: pointer;
+    user-select: none;
+    min-width: 100px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+}
+
+.time-picker-display::after {
+    content: '▼';
+    font-size: 0.6rem;
+    opacity: 0.6;
+    transition: transform 0.2s ease;
+}
+
+.time-picker-display.selected {
+    color: var(--text-primary);
+}
+
+.time-picker-dropdown {
+    display: none;
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    min-width: 120px;
+    max-height: 250px;
+    background: var(--bg-card);
+    border: 1px solid var(--accent-blue);
+    border-radius: 8px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+    z-index: 100;
+    overflow: hidden;
+    margin-top: 4px;
+}
+
+.time-picker-dropdown.open {
+    display: block;
+}
+
+.time-picker-scroll {
+    max-height: 250px;
+    overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: var(--accent-blue) transparent;
+}
+
+.time-picker-scroll::-webkit-scrollbar {
+    width: 6px;
+}
+
+.time-picker-scroll::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.time-picker-scroll::-webkit-scrollbar-thumb {
+    background: var(--accent-blue);
+    border-radius: 3px;
+}
+
+.time-picker-item {
+    padding: 0.5rem 1rem;
+    cursor: pointer;
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+    transition: background 0.15s ease, color 0.15s ease;
+    height: 36px;
+    box-sizing: border-box;
+    display: flex;
+    align-items: center;
+}
+
+.time-picker-item:hover {
+    background: var(--bg-hover);
+    color: var(--text-primary);
+}
+
+.time-picker-item.active {
+    background: rgba(88, 166, 255, 0.15);
+    color: var(--accent-blue);
+    font-weight: 600;
+}
+
 .schedule-add {
     display: flex;
     gap: 0.75rem;
@@ -991,6 +1081,77 @@ footer {
 }
 
 .schedule-delete-btn:hover {
+    background: var(--accent-red);
+    color: white;
+}
+
+/* 日時編集ボタン */
+.schedule-edit-btn {
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    font-size: 0.85rem;
+    padding: 0.1rem 0.3rem;
+    border-radius: 4px;
+    transition: all 0.2s ease;
+    opacity: 0.6;
+}
+
+.schedule-edit-btn:hover {
+    opacity: 1;
+    background: var(--bg-hover);
+}
+
+/* インライン編集フォーム */
+.schedule-edit-form {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+.schedule-edit-form .schedule-input {
+    padding: 0.3rem 0.5rem;
+    font-size: 0.85rem;
+}
+
+.schedule-edit-save-btn {
+    background: transparent;
+    border: 1px solid var(--accent-green);
+    color: var(--accent-green);
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    cursor: pointer;
+    font-size: 0.8rem;
+    font-weight: bold;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.schedule-edit-save-btn:hover {
+    background: var(--accent-green);
+    color: white;
+}
+
+.schedule-edit-cancel-btn {
+    background: transparent;
+    border: 1px solid var(--accent-red);
+    color: var(--accent-red);
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    cursor: pointer;
+    font-size: 0.75rem;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.schedule-edit-cancel-btn:hover {
     background: var(--accent-red);
     color: white;
 }
