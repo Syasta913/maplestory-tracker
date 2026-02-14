@@ -1293,3 +1293,26 @@ footer {
     background: var(--accent-red);
     color: white;
 }
+/* External Link Button */
+.external-link-btn {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    padding: 0 1.5rem;
+    font-size: 1rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-decoration: none;
+    color: var(--text-primary);
+}
+
+.external-link-btn:hover {
+    background: var(--bg-hover);
+    transform: scale(1.05);
+    color: var(--accent-orange);
+    border-color: var(--accent-orange);
+}
