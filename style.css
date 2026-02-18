@@ -98,6 +98,10 @@ header h1 {
     color: var(--accent-orange);
 }
 
+.current-time {
+    color: var(--accent-blue);
+}
+
 /* Settings Button */
 .settings-btn {
     background: var(--bg-secondary);
@@ -1293,6 +1297,7 @@ footer {
     background: var(--accent-red);
     color: white;
 }
+
 /* External Link Button */
 .external-link-btn {
     background: var(--bg-secondary);
@@ -1315,4 +1320,21 @@ footer {
     transform: scale(1.05);
     color: var(--accent-orange);
     border-color: var(--accent-orange);
+}
+
+/* オリジン選択ボックス */
+.schedule-origin-select {
+    min-width: 130px;
+}
+
+/* スケジュールアイテム内のオリジンバッジ */
+.schedule-origin-badge {
+    display: inline-block;
+    padding: 0.15rem 0.5rem;
+    background: rgba(88, 166, 255, 0.15);
+    color: var(--accent-blue);
+    font-size: 0.8rem;
+    font-weight: 600;
+    border-radius: 6px;
+    border: 1px solid rgba(88, 166, 255, 0.3);
 }

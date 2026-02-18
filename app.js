@@ -155,7 +155,7 @@ function isRutis(serverIndex, charIndex) {
 }
 
 // 状態管理
-let currentServer = 0; // 0, 1, 2 または 'all'
+let currentServer = 'all'; // 0, 1, 2 または 'all'
 let serverData = loadData();
 
 // 全キャラクター情報を取得（全サーバーモード用）
@@ -490,7 +490,9 @@ function renderTable(tableId, items, dataKey, isRutisOnly = false) {
                         const dayName = dayNames[schedDate.getDay()];
                         const hours = String(schedDate.getHours()).padStart(2, '0');
                         const minutes = String(schedDate.getMinutes()).padStart(2, '0');
-                        const tooltipText = `${month}月${day}日(${dayName})${hours}:${minutes}`;
+                        const originMarkers = { '1': '①', '2': '②', '3': '③' };
+                        const originSuffix = matchingSchedule.origin ? originMarkers[matchingSchedule.origin] || '' : '';
+                        const tooltipText = `${month}月${day}日(${dayName})${hours}:${minutes}${originSuffix ? ' ' + originSuffix : ''}`;
                         scheduleIcon = `<span class="schedule-icon" data-tooltip="${tooltipText}">📅</span>`;
                     }
                 }
@@ -579,6 +581,15 @@ function renderTable(tableId, items, dataKey, isRutisOnly = false) {
 // カウントダウンを更新
 function updateCountdowns() {
     const now = new Date();
+
+    // 現在時刻を表示
+    const dayNames = ['日', '月', '火', '水', '木', '金', '土'];
+    const currentMonth = now.getMonth() + 1;
+    const currentDay = now.getDate();
+    const currentDayName = dayNames[now.getDay()];
+    const currentHours = String(now.getHours()).padStart(2, '0');
+    const currentMinutes = String(now.getMinutes()).padStart(2, '0');
+    document.getElementById('current-datetime').textContent = `${currentMonth}月${currentDay}日(${currentDayName}) ${currentHours}:${currentMinutes}`;
 
     const nextWeekly = getNextWeeklyReset();
     const weeklyDiff = nextWeekly - now;
@@ -718,6 +729,12 @@ function renderSchedule() {
                     <div class="time-picker-scroll" id="time-picker-scroll"></div>
                 </div>
             </div>
+            <select id="schedule-origin" class="schedule-input schedule-origin-select">
+                <option value="">オリジン...</option>
+                <option value="1">🌐 1番目</option>
+                <option value="2">🌐 2番目</option>
+                <option value="3">🌐 3番目</option>
+            </select>
             <input type="text" id="schedule-memo" class="schedule-input" placeholder="メモ（参加者など）">
             <button id="schedule-add-btn" class="schedule-btn">追加</button>
         </div>
@@ -736,12 +753,17 @@ function renderSchedule() {
             const timeStr = date.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' });
             const isPast = date < new Date();
 
+            // オリジン順番の表示
+            const originLabels = { '1': 'オリジン1番目', '2': 'オリジン2番目', '3': 'オリジン3番目' };
+            const originHtml = schedule.origin ? `<span class="schedule-origin-badge">${originLabels[schedule.origin]}</span>` : '';
+
             html += `
                 <div class="schedule-item ${isPast ? 'past' : ''}" data-id="${schedule.id}">
                     <div class="schedule-info">
                         <span class="schedule-boss-name">${schedule.boss}</span>
                         ${schedule.char ? `<span class="schedule-char-name">${schedule.char}</span>` : ''}
                         <span class="schedule-date">${dateStr} ${timeStr}</span>
+                        ${originHtml}
                         <button class="schedule-edit-btn" data-id="${schedule.id}" title="日時を変更">✏️</button>
                         ${schedule.memo ? `<span class="schedule-memo">${schedule.memo}</span>` : ''}
                     </div>
@@ -879,12 +901,14 @@ function initTimePicker() {
     });
 }
 
+
 // スケジュール追加
 function addSchedule() {
     const boss = document.getElementById('schedule-boss').value;
     const char = document.getElementById('schedule-char').value;
     const date = document.getElementById('schedule-date').value;
     const time = document.getElementById('schedule-time').value;
+    const origin = document.getElementById('schedule-origin').value;
     const memo = document.getElementById('schedule-memo').value;
 
     if (!boss || !date || !time) {
@@ -900,6 +924,7 @@ function addSchedule() {
         boss,
         char,
         datetime,
+        origin,
         memo
     });
 
@@ -916,6 +941,7 @@ function addSchedule() {
         timeDisplay.textContent = '時間...';
         timeDisplay.classList.remove('selected');
     }
+    document.getElementById('schedule-origin').value = '';
     document.getElementById('schedule-memo').value = '';
 }
 
@@ -950,6 +976,7 @@ function repeatNextWeek(id) {
         boss: original.boss,
         char: original.char,
         datetime: newDatetime,
+        origin: original.origin || '',
         memo: original.memo
     });
 
@@ -1095,7 +1122,8 @@ function rebuildServerData() {
 // サーバータブを更新
 function updateServerTabs() {
     const nav = document.querySelector('.server-tabs');
-    let html = '<button class="server-tab" data-server="all">全サーバー</button>';
+    const allActive = currentServer === 'all' ? 'active' : '';
+    let html = `<button class="server-tab ${allActive}" data-server="all">全サーバー</button>`;
     SERVERS.forEach((server, i) => {
         const active = currentServer === i ? 'active' : '';
         html += `<button class="server-tab ${active}" data-server="${i}">${server.name}</button>`;
