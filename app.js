@@ -589,7 +589,10 @@ function updateCountdowns() {
     const currentDayName = dayNames[now.getDay()];
     const currentHours = String(now.getHours()).padStart(2, '0');
     const currentMinutes = String(now.getMinutes()).padStart(2, '0');
-    document.getElementById('current-datetime').textContent = `${currentMonth}月${currentDay}日(${currentDayName}) ${currentHours}:${currentMinutes}`;
+    const currentDatetimeEl = document.getElementById('current-datetime');
+    if (currentDatetimeEl) {
+        currentDatetimeEl.textContent = `${currentMonth}月${currentDay}日(${currentDayName}) ${currentHours}:${currentMinutes}`;
+    }
 
     const nextWeekly = getNextWeeklyReset();
     const weeklyDiff = nextWeekly - now;
