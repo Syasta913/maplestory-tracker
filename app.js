@@ -340,19 +340,68 @@ function renderContent() {
         </section>
         
         <section class="category schedule-section">
-            <div class="category-header">
+            <div class="category-header schedule-header">
                 <h2>📅 協力討伐スケジュール</h2>
+                <div class="schedule-header-actions">
+                    <button id="schedule-notify-btn" class="schedule-notify-btn" style="display: none;" title="5分前にブラウザ通知を送ります">🔔 通知を許可</button>
+                    <button id="schedule-copy-all-btn" class="schedule-copy-all-btn" title="全スケジュールをコピー">📋 一括コピー</button>
+                </div>
             </div>
             <div class="schedule-container" id="schedule-container"></div>
         </section>
     `;
 
-    // 週間ボス（通常 + ルティス専用）
+    // 週間ボス（通常 + 専用）
     const allWeeklyBosses = [...DATA.weeklyBosses, ...DATA.rutisOnlyBosses];
     renderTable('weekly-boss-table', allWeeklyBosses, 'weeklyBosses');
     renderTable('monthly-boss-table', DATA.monthlyBosses, 'monthlyBosses');
     renderTable('weekly-quest-table', DATA.weeklyQuests, 'weeklyQuests');
     renderSchedule();
+
+    // 通知ボタンの制御
+    const notifyBtn = document.getElementById('schedule-notify-btn');
+    if (notifyBtn) {
+        if ('Notification' in window) {
+            notifyBtn.style.display = 'inline-block';
+            if (Notification.permission === 'granted') {
+                notifyBtn.textContent = '🔔 通知ON';
+                notifyBtn.style.opacity = '0.7';
+                notifyBtn.style.cursor = 'default';
+                notifyBtn.title = '通知はすでに許可されています';
+            } else if (Notification.permission === 'denied') {
+                notifyBtn.textContent = '🔕 通知ブロック中';
+                notifyBtn.style.opacity = '0.7';
+                notifyBtn.style.cursor = 'default';
+                notifyBtn.title = 'ブラウザの設定でブロックされているか、ローカルファイル(file://)での閲覧のため制限されています。';
+            } else {
+                notifyBtn.addEventListener('click', () => {
+                    Notification.requestPermission().then(permission => {
+                        if (permission === 'granted') {
+                            notifyBtn.textContent = '🔔 通知ON';
+                            notifyBtn.style.opacity = '0.7';
+                            notifyBtn.style.cursor = 'default';
+                            new Notification("通知が有効になりました", { body: "スケジュールの5分前にお知らせします。" });
+                        } else if (permission === 'denied') {
+                            notifyBtn.textContent = '🔕 通知ブロック中';
+                            notifyBtn.style.opacity = '0.7';
+                            notifyBtn.style.cursor = 'default';
+                        }
+                    });
+                });
+            }
+        } else {
+            notifyBtn.style.display = 'inline-block';
+            notifyBtn.textContent = '🔕 通知非対応ブラウザ';
+            notifyBtn.style.opacity = '0.7';
+            notifyBtn.style.cursor = 'default';
+        }
+    }
+
+    // 一括コピーボタンのイベントリスナー
+    const copyAllBtn = document.getElementById('schedule-copy-all-btn');
+    if (copyAllBtn) {
+        copyAllBtn.addEventListener('click', copyAllSchedules);
+    }
 }
 
 // テーブルをレンダリング
@@ -409,7 +458,7 @@ function renderTable(tableId, items, dataKey, isRutisOnly = false) {
             }
         }
 
-        // ルティス専用ボスかどうか判定
+        // シャスタ専用ボスかどうか判定
         const isRutisOnlyBoss = isRutisOnly || DATA.rutisOnlyBosses.includes(item);
 
         // 制限付きアイテムの判定
@@ -601,6 +650,9 @@ function updateCountdowns() {
     const nextMonthly = getNextMonthlyReset();
     const monthlyDiff = nextMonthly - now;
     document.getElementById('monthly-countdown').textContent = formatCountdown(monthlyDiff);
+
+    // スケジュール通知のチェック
+    checkScheduleNotifications();
 }
 
 function formatCountdown(ms) {
@@ -691,6 +743,51 @@ function saveScheduleData(data) {
     localStorage.setItem('mapleSchedule', JSON.stringify(data));
 }
 
+// スケジュール通知のチェック処理
+function checkScheduleNotifications() {
+    if (!('Notification' in window) || Notification.permission !== 'granted') return;
+
+    const schedules = loadScheduleData();
+    const now = new Date();
+
+    // 既に通知済みのスケジュールIDを取得
+    const notifiedStr = localStorage.getItem('mapleNotifiedSchedules');
+    let notifiedSchedules = notifiedStr ? JSON.parse(notifiedStr) : [];
+    let updated = false;
+
+    schedules.forEach(schedule => {
+        // 既に通知済みの場合はスキップ
+        if (notifiedSchedules.includes(schedule.id)) return;
+
+        const schedDate = new Date(schedule.datetime);
+        const timeDiff = schedDate.getTime() - now.getTime();
+        const minutesDiff = timeDiff / (1000 * 60);
+
+        // 5分以内になった場合 (0分より大きく、5分以下)
+        if (minutesDiff > 0 && minutesDiff <= 5) {
+            const timeStr = schedDate.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' });
+
+            const title = `[まもなく] ${schedule.boss}`;
+            const body = `${schedule.char ? schedule.char + ' ' : ''}${timeStr} 開始予定です！`;
+
+            new Notification(title, {
+                body: body
+            });
+
+            notifiedSchedules.push(schedule.id);
+            updated = true;
+        }
+    });
+
+    if (updated) {
+        // 直近50件まで保存
+        if (notifiedSchedules.length > 50) {
+            notifiedSchedules = notifiedSchedules.slice(-50);
+        }
+        localStorage.setItem('mapleNotifiedSchedules', JSON.stringify(notifiedSchedules));
+    }
+}
+
 // 過去のスケジュールを削除
 function cleanupPastSchedules() {
     const schedules = loadScheduleData();
@@ -760,8 +857,30 @@ function renderSchedule() {
             const originLabels = { '1': 'オリジン1番目', '2': 'オリジン2番目', '3': 'オリジン3番目' };
             const originHtml = schedule.origin ? `<span class="schedule-origin-badge">${originLabels[schedule.origin]}</span>` : '';
 
+            // 日付に基づくクラスの判定 (本日、今週、来週)
+            const now = new Date();
+            const currentWeeklyReset = getLastWeeklyReset();
+            const nextWeeklyReset = getNextWeeklyReset();
+            const nextNextWeeklyReset = new Date(nextWeeklyReset);
+            nextNextWeeklyReset.setDate(nextNextWeeklyReset.getDate() + 7);
+
+            const isToday = date.getFullYear() === now.getFullYear() &&
+                date.getMonth() === now.getMonth() &&
+                date.getDate() === now.getDate();
+            const isThisWeek = date >= currentWeeklyReset && date < nextWeeklyReset;
+            const isNextWeek = date >= nextWeeklyReset && date < nextNextWeeklyReset;
+
+            let periodClass = '';
+            if (isToday) {
+                periodClass = 'today';
+            } else if (isThisWeek) {
+                periodClass = 'this-week';
+            } else if (isNextWeek) {
+                periodClass = 'next-week';
+            }
+
             html += `
-                <div class="schedule-item ${isPast ? 'past' : ''}" data-id="${schedule.id}">
+                <div class="schedule-item ${isPast ? 'past' : ''} ${periodClass}" data-id="${schedule.id}">
                     <div class="schedule-info">
                         <span class="schedule-boss-name">${schedule.boss}</span>
                         ${schedule.char ? `<span class="schedule-char-name">${schedule.char}</span>` : ''}
@@ -1004,6 +1123,55 @@ function copyScheduleDate(id) {
     const copyText = `${month}月${day}日(${dayName})${hours}:${minutes}`;
 
     navigator.clipboard.writeText(copyText).catch(err => {
+        console.error('コピーに失敗しました:', err);
+    });
+}
+
+// 全スケジュールを一括コピー（スプレッドシート用タブ区切り）
+function copyAllSchedules() {
+    const schedules = loadScheduleData();
+    // 未来のスケジュールのみ対象、日時順にソート
+    const futureSchedules = schedules
+        .filter(s => new Date(s.datetime) >= new Date())
+        .sort((a, b) => new Date(a.datetime) - new Date(b.datetime));
+
+    if (futureSchedules.length === 0) {
+        alert('コピーするスケジュールがありません');
+        return;
+    }
+
+    const dayNames = ['日', '月', '火', '水', '木', '金', '土'];
+    const originLabels = { '1': '1番目', '2': '2番目', '3': '3番目' };
+
+    // ヘッダー行
+    let lines = ['ボス\tキャラ\t日時\tオリジン\tメモ'];
+
+    futureSchedules.forEach(schedule => {
+        const date = new Date(schedule.datetime);
+        const month = date.getMonth() + 1;
+        const day = date.getDate();
+        const dayName = dayNames[date.getDay()];
+        const hours = String(date.getHours()).padStart(2, '0');
+        const minutes = String(date.getMinutes()).padStart(2, '0');
+        const dateStr = `${month}/${day}(${dayName}) ${hours}:${minutes}`;
+        const originStr = schedule.origin ? originLabels[schedule.origin] || '' : '';
+
+        lines.push(`${schedule.boss}\t${schedule.char || ''}\t${dateStr}\t${originStr}\t${schedule.memo || ''}`);
+    });
+
+    const copyText = lines.join('\n');
+    navigator.clipboard.writeText(copyText).then(() => {
+        const btn = document.getElementById('schedule-copy-all-btn');
+        if (btn) {
+            const original = btn.textContent;
+            btn.textContent = '✅ コピー済み';
+            btn.classList.add('copied');
+            setTimeout(() => {
+                btn.textContent = original;
+                btn.classList.remove('copied');
+            }, 2000);
+        }
+    }).catch(err => {
         console.error('コピーに失敗しました:', err);
     });
 }
