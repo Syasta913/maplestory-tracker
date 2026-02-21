@@ -1312,12 +1312,19 @@ footer {
 }
 
 /* External Link Button */
+.external-link-container {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    justify-content: center;
+}
+
 .external-link-btn {
     background: var(--bg-secondary);
     border: 1px solid var(--border-color);
     border-radius: 12px;
-    padding: 0 1.5rem;
-    font-size: 1rem;
+    padding: 0.4rem 1.5rem;
+    font-size: 0.95rem;
     font-weight: 700;
     cursor: pointer;
     transition: all 0.2s ease;
@@ -1326,13 +1333,23 @@ footer {
     justify-content: center;
     text-decoration: none;
     color: var(--text-primary);
+    width: 100%;
+    box-sizing: border-box;
 }
 
 .external-link-btn:hover {
     background: var(--bg-hover);
     transform: scale(1.05);
-    color: var(--accent-orange);
     border-color: var(--accent-orange);
+}
+
+.external-link-btn.gold-text {
+    color: #fbbf24;
+}
+
+.external-link-btn.gold-text:hover {
+    color: #fcd34d;
+    border-color: #fbbf24;
 }
 
 /* オリジン選択ボックス */
