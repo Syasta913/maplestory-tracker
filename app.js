@@ -363,32 +363,48 @@ function renderContent() {
     if (notifyBtn) {
         if ('Notification' in window) {
             notifyBtn.style.display = 'inline-block';
-            if (Notification.permission === 'granted') {
-                notifyBtn.textContent = '🔔 通知ON';
-                notifyBtn.style.opacity = '0.7';
-                notifyBtn.style.cursor = 'default';
-                notifyBtn.title = '通知はすでに許可されています';
-            } else if (Notification.permission === 'denied') {
-                notifyBtn.textContent = '🔕 通知ブロック中';
-                notifyBtn.style.opacity = '0.7';
-                notifyBtn.style.cursor = 'default';
-                notifyBtn.title = 'ブラウザの設定でブロックされているか、ローカルファイル(file://)での閲覧のため制限されています。';
-            } else {
-                notifyBtn.addEventListener('click', () => {
+
+            const updateNotifyBtnUI = () => {
+                const isEnabled = localStorage.getItem('mapleNotificationsEnabled') === 'true';
+                if (Notification.permission === 'granted' && isEnabled) {
+                    notifyBtn.textContent = '🔔 通知ON';
+                    notifyBtn.title = '通知は有効です。クリックでOFFにします。';
+                    notifyBtn.style.opacity = '1';
+                } else if (Notification.permission === 'denied') {
+                    notifyBtn.textContent = '🔕 通知ブロック中';
+                    notifyBtn.title = 'ブラウザの設定でブロックされているか、制限されています。';
+                    notifyBtn.style.opacity = '0.7';
+                } else {
+                    notifyBtn.textContent = '🔕 通知OFF';
+                    notifyBtn.title = '通知は無効です。クリックでONにします。';
+                    notifyBtn.style.opacity = '0.7';
+                }
+            };
+
+            updateNotifyBtnUI();
+
+            notifyBtn.addEventListener('click', () => {
+                if (Notification.permission === 'denied') return;
+
+                const isEnabled = localStorage.getItem('mapleNotificationsEnabled') === 'true';
+                if (isEnabled) {
+                    // Turn off
+                    localStorage.setItem('mapleNotificationsEnabled', 'false');
+                    updateNotifyBtnUI();
+                } else {
+                    // Request & turn on
                     Notification.requestPermission().then(permission => {
                         if (permission === 'granted') {
-                            notifyBtn.textContent = '🔔 通知ON';
-                            notifyBtn.style.opacity = '0.7';
-                            notifyBtn.style.cursor = 'default';
+                            localStorage.setItem('mapleNotificationsEnabled', 'true');
+                            updateNotifyBtnUI();
                             new Notification("通知が有効になりました", { body: "スケジュールの5分前にお知らせします。" });
-                        } else if (permission === 'denied') {
-                            notifyBtn.textContent = '🔕 通知ブロック中';
-                            notifyBtn.style.opacity = '0.7';
-                            notifyBtn.style.cursor = 'default';
+                        } else {
+                            localStorage.setItem('mapleNotificationsEnabled', 'false');
+                            updateNotifyBtnUI();
                         }
                     });
-                });
-            }
+                }
+            });
         } else {
             notifyBtn.style.display = 'inline-block';
             notifyBtn.textContent = '🔕 通知非対応ブラウザ';
@@ -746,6 +762,7 @@ function saveScheduleData(data) {
 // スケジュール通知のチェック処理
 function checkScheduleNotifications() {
     if (!('Notification' in window) || Notification.permission !== 'granted') return;
+    if (localStorage.getItem('mapleNotificationsEnabled') !== 'true') return;
 
     const schedules = loadScheduleData();
     const now = new Date();
@@ -1186,8 +1203,6 @@ function startEditSchedule(id) {
     if (!itemEl) return;
 
     const infoEl = itemEl.querySelector('.schedule-info');
-    const dateSpan = infoEl.querySelector('.schedule-date');
-    const editBtn = infoEl.querySelector('.schedule-edit-btn');
 
     // 既に編集中の場合は何もしない
     if (infoEl.querySelector('.schedule-edit-form')) return;
@@ -1195,6 +1210,8 @@ function startEditSchedule(id) {
     const currentDate = new Date(schedule.datetime);
     const dateValue = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}-${String(currentDate.getDate()).padStart(2, '0')}`;
     const timeValue = `${String(currentDate.getHours()).padStart(2, '0')}:${String(currentDate.getMinutes()).padStart(2, '0')}`;
+    const originValue = schedule.origin || '';
+    const memoValue = schedule.memo || '';
 
     // 5分刻みの時間オプションを生成
     const timeOptions = [];
@@ -1214,41 +1231,53 @@ function startEditSchedule(id) {
         <select class="schedule-edit-time schedule-input">
             ${timeOptions.map(t => `<option value="${t}" ${t === timeValue ? 'selected' : ''}>${t}</option>`).join('')}
         </select>
+        <select class="schedule-edit-origin schedule-input schedule-origin-select">
+            <option value="">オリジン...</option>
+            <option value="1" ${originValue === '1' ? 'selected' : ''}>🌐 1番目</option>
+            <option value="2" ${originValue === '2' ? 'selected' : ''}>🌐 2番目</option>
+            <option value="3" ${originValue === '3' ? 'selected' : ''}>🌐 3番目</option>
+        </select>
+        <input type="text" class="schedule-edit-memo schedule-input" value="${memoValue}" placeholder="メモ（参加者など）">
         <button class="schedule-edit-save-btn" title="保存">✓</button>
         <button class="schedule-edit-cancel-btn" title="キャンセル">✕</button>
     `;
 
-    // 日付表示と編集ボタンを非表示にして編集フォームを挿入
-    dateSpan.style.display = 'none';
-    editBtn.style.display = 'none';
-    dateSpan.after(editForm);
+    // ボス名とキャラ名以外を非表示にして編集フォームを挿入
+    Array.from(infoEl.children).forEach(child => {
+        if (child.classList.contains('schedule-boss-name') || child.classList.contains('schedule-char-name')) return;
+        child.style.display = 'none';
+    });
+    infoEl.appendChild(editForm);
 
     // 保存ボタン
     editForm.querySelector('.schedule-edit-save-btn').addEventListener('click', () => {
         const newDate = editForm.querySelector('.schedule-edit-date').value;
         const newTime = editForm.querySelector('.schedule-edit-time').value;
+        const newOrigin = editForm.querySelector('.schedule-edit-origin').value;
+        const newMemo = editForm.querySelector('.schedule-edit-memo').value;
         if (!newDate || !newTime) {
             alert('日付と時間を入力してください');
             return;
         }
-        saveEditSchedule(id, `${newDate}T${newTime}`);
+        saveEditSchedule(id, `${newDate}T${newTime}`, newOrigin, newMemo);
     });
 
     // キャンセルボタン
     editForm.querySelector('.schedule-edit-cancel-btn').addEventListener('click', () => {
         editForm.remove();
-        dateSpan.style.display = '';
-        editBtn.style.display = '';
+        Array.from(infoEl.children).forEach(child => child.style.display = '');
     });
 }
 
-// スケジュールの日時を保存
-function saveEditSchedule(id, newDatetime) {
+// スケジュールの編集を保存
+function saveEditSchedule(id, newDatetime, newOrigin, newMemo) {
     const schedules = loadScheduleData();
     const schedule = schedules.find(s => s.id === id);
     if (!schedule) return;
 
     schedule.datetime = newDatetime;
+    schedule.origin = newOrigin;
+    schedule.memo = newMemo;
     saveScheduleData(schedules);
     renderContent();
 }
