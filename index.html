@@ -84,13 +84,46 @@
         </footer>
     </div>
 
+    <!-- サイト移転モーダル -->
+    <div class="migration-overlay" id="migration-overlay">
+        <div class="migration-modal">
+            <h2>⚠️ サイト移転のお知らせ</h2>
+            <p>このアプリケーションは新しいURLへ移転しました。</p>
+            <p>お手数ですが、以下の手順でデータを引き継いで新しいサイトをご利用ください。</p>
+            <div class="migration-steps">
+                <div class="step">
+                    <p class="step-title">1. 現在のデータを保存する</p>
+                    <button id="migration-export-btn" class="migration-btn export-btn">データをエクスポート</button>
+                    <p class="step-help">※ ブラウザに保存されている全データをファイルとしてダウンロードします</p>
+                </div>
+                <div class="step">
+                    <p class="step-title">2. 新しいサイトへ移動し、設定からインポートする</p>
+                    <a href="https://syasta-lu.com/maplestory-tracker/" class="migration-btn link-btn" rel="noopener noreferrer">新しいサイトへ移動する</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script src="app.js?v=3"></script>
     <script>
-        // ページ読み込み時に免責事項チェック
+        // ページ読み込み時に移転モーダルを表示し、メインコンテンツを非表示にする
         document.addEventListener('DOMContentLoaded', function () {
-            if (!checkDisclaimer()) {
-                // 免責事項未同意の場合、メインコンテンツを非表示
-                document.querySelector('.container').style.display = 'none';
+            const container = document.querySelector('.container');
+            const overlay = document.getElementById('migration-overlay');
+            
+            if (container) container.style.display = 'none';
+            if (overlay) overlay.style.display = 'flex';
+            
+            // エクスポートボタンに既存のexportData()をバインド
+            const exportBtn = document.getElementById('migration-export-btn');
+            if (exportBtn) {
+                exportBtn.addEventListener('click', function() {
+                    if (typeof exportData === 'function') {
+                        exportData();
+                    } else {
+                        alert('エラー：エクスポート機能が見つかりません。');
+                    }
+                });
             }
         });
     </script>
